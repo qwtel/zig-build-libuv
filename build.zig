@@ -5,7 +5,7 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
     const lib = b.addStaticLibrary(.{
-        .name = "uv",
+        .name = "uv_a",
         .target = target,
         .optimize = optimize,
     });
@@ -138,7 +138,7 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
-    if (os.tag == .dragonfly or os.tag == .freebsd or os.tag == .netbsd or os.tag == .openbsd or os.tag == .linux) {
+    if (os.tag == .dragonfly or os.tag == .freebsd or os.tag == .netbsd or os.tag == .openbsd) {
         try uv_sources.appendSlice(&.{
             "src/unix/posix-hrtime.c",
             "src/unix/bsd-proctitle.c",
@@ -230,6 +230,9 @@ pub fn build(b: *std.Build) !void {
         .files = uv_sources.items,
         .flags = uv_cflags.items,
     });
+    lib.linkLibC();
+
+    lib.installHeadersDirectory(b.path("include"), "", .{});
 
     b.installArtifact(lib);
 }
