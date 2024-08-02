@@ -12,6 +12,7 @@
 *.VC.opendb
 core
 .cache
+.zig-cache
 vgcore.*
 .buildstamp
 .dirstamp
@@ -40,6 +41,7 @@ Makefile
 Makefile.in
 
 /build/
+/zig-out/
 
 /test/.libs/
 /test/run-tests
