@@ -17,13 +17,20 @@ pub fn build(b: *std.Build) !void {
     const result = target.result;
     const os = result.os;
 
+    var uv_defines = std.ArrayList([]const []const u8).init(b.allocator);
     var uv_sources = std.ArrayList([]const u8).init(b.allocator);
     var uv_cflags = std.ArrayList([]const u8).init(b.allocator);
+    var uv_test_sources = std.ArrayList([]const u8).init(b.allocator);
+    var uv_test_libraries = std.ArrayList([]const u8).init(b.allocator);
+    defer uv_defines.deinit();
     defer uv_sources.deinit();
     defer uv_cflags.deinit();
+    defer uv_test_sources.deinit();
+    defer uv_test_libraries.deinit();
 
     // TODO: add lint flags from cmakelist.txt?
     try uv_cflags.appendSlice(&.{
+        "-Wall",
         "-fno-strict-aliasing",
     });
 
@@ -44,9 +51,9 @@ pub fn build(b: *std.Build) !void {
 
     // Links
     if (result.os.tag == .windows) {
-        lib.defineCMacro("WIN32_LEAN_AND_MEAN", "1");
-        lib.defineCMacro("_WIN32_WINNT", "0x0602");
-        lib.defineCMacro("_CRT_DECLARE_NONSTDC_NAMES", "0");
+        try uv_defines.append(&.{ "WIN32_LEAN_AND_MEAN", "1" });
+        try uv_defines.append(&.{ "_WIN32_WINNT", "0x0602" });
+        try uv_defines.append(&.{ "_CRT_DECLARE_NONSTDC_NAMES", "0" });
 
         lib.linkSystemLibrary("psapi");
         lib.linkSystemLibrary("user32");
@@ -85,9 +92,11 @@ pub fn build(b: *std.Build) !void {
             "src/win/winapi.c",
             "src/win/winsock.c",
         });
+        try uv_test_libraries.appendSlice(&.{"ws2_32"});
+        try uv_test_sources.appendSlice(&.{ "src/win/snprintf.c", "test/runner-win.c" });
     } else {
-        lib.defineCMacro("_FILE_OFFSET_BITS", "64");
-        lib.defineCMacro("_LARGEFILE_SOURCE", "1");
+        try uv_defines.append(&.{ "_FILE_OFFSET_BITS", "64" });
+        try uv_defines.append(&.{ "_LARGEFILE_SOURCE", "1" });
         if (!result.isAndroid()) {
             lib.linkSystemLibrary("pthread");
         }
@@ -112,10 +121,11 @@ pub fn build(b: *std.Build) !void {
             "src/unix/tty.c",
             "src/unix/udp.c",
         });
+        try uv_test_sources.appendSlice(&.{"test/runner-unix.c"});
     }
 
     if (result.isAndroid()) {
-        lib.defineCMacro("_GNU_SOURCE", "1");
+        try uv_defines.append(&.{ "_GNU_SOURCE", "1" });
         lib.linkSystemLibrary("dl");
         try uv_sources.appendSlice(&.{
             "src/unix/linux.c",
@@ -165,8 +175,8 @@ pub fn build(b: *std.Build) !void {
     }
 
     if (result.isDarwin()) {
-        lib.defineCMacro("_DARWIN_UNLIMITED_SELECT", "1");
-        lib.defineCMacro("_DARWIN_USE_64_BIT_INODE", "1");
+        try uv_defines.append(&.{ "_DARWIN_UNLIMITED_SELECT", "1" });
+        try uv_defines.append(&.{ "_DARWIN_USE_64_BIT_INODE", "1" });
         try uv_sources.appendSlice(&.{
             "src/unix/darwin-proctitle.c",
             "src/unix/darwin.c",
@@ -187,8 +197,8 @@ pub fn build(b: *std.Build) !void {
     }
 
     if (os.tag == .linux) {
-        lib.defineCMacro("_GNU_SOURCE", "1");
-        lib.defineCMacro("_POSIX_C_SOURCE", "200112");
+        try uv_defines.append(&.{ "_GNU_SOURCE", "1" });
+        try uv_defines.append(&.{ "_POSIX_C_SOURCE", "200112" });
         lib.linkSystemLibrary("dl");
         lib.linkSystemLibrary("rt");
         try uv_sources.appendSlice(&.{
@@ -213,7 +223,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     if (os.tag == .haiku) {
-        lib.defineCMacro("_BSD_SOURCE", "1");
+        try uv_defines.append(&.{ "_BSD_SOURCE", "1" });
         lib.linkSystemLibrary("bsd");
         lib.linkSystemLibrary("network");
         try uv_sources.appendSlice(&.{
@@ -226,13 +236,227 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
+    if (result.isBSD() or os.tag == .linux) {
+        try uv_test_libraries.append("util");
+    }
+
     lib.addCSourceFiles(.{
         .files = uv_sources.items,
         .flags = uv_cflags.items,
     });
     lib.linkLibC();
 
+    for (uv_defines.items) |define| {
+        lib.defineCMacro(define[0], define[1]);
+    }
+
     lib.installHeadersDirectory(b.path("include"), "", .{});
 
     b.installArtifact(lib);
+
+    const LIBUV_BUILD_TESTS = b.option(bool, "build-tests", "") orelse false;
+
+    if (LIBUV_BUILD_TESTS) {
+        try uv_test_sources.appendSlice(&.{
+            "test/blackhole-server.c",
+            "test/echo-server.c",
+            "test/run-tests.c",
+            "test/runner.c",
+            "test/test-active.c",
+            "test/test-async-null-cb.c",
+            "test/test-async.c",
+            "test/test-barrier.c",
+            "test/test-callback-stack.c",
+            "test/test-close-fd.c",
+            "test/test-close-order.c",
+            "test/test-condvar.c",
+            "test/test-connect-unspecified.c",
+            "test/test-connection-fail.c",
+            "test/test-cwd-and-chdir.c",
+            "test/test-default-loop-close.c",
+            "test/test-delayed-accept.c",
+            "test/test-dlerror.c",
+            "test/test-eintr-handling.c",
+            "test/test-embed.c",
+            "test/test-emfile.c",
+            "test/test-env-vars.c",
+            "test/test-error.c",
+            "test/test-fail-always.c",
+            "test/test-fork.c",
+            "test/test-fs-copyfile.c",
+            "test/test-fs-event.c",
+            "test/test-fs-poll.c",
+            "test/test-fs.c",
+            "test/test-fs-readdir.c",
+            "test/test-fs-fd-hash.c",
+            "test/test-fs-open-flags.c",
+            "test/test-get-currentexe.c",
+            "test/test-get-loadavg.c",
+            "test/test-get-memory.c",
+            "test/test-get-passwd.c",
+            "test/test-getaddrinfo.c",
+            "test/test-gethostname.c",
+            "test/test-getnameinfo.c",
+            "test/test-getsockname.c",
+            "test/test-getters-setters.c",
+            "test/test-gettimeofday.c",
+            "test/test-handle-fileno.c",
+            "test/test-homedir.c",
+            "test/test-hrtime.c",
+            "test/test-idle.c",
+            "test/test-idna.c",
+            "test/test-ip4-addr.c",
+            "test/test-ip6-addr.c",
+            "test/test-ip-name.c",
+            "test/test-ipc-heavy-traffic-deadlock-bug.c",
+            "test/test-ipc-send-recv.c",
+            "test/test-ipc.c",
+            "test/test-loop-alive.c",
+            "test/test-loop-close.c",
+            "test/test-loop-configure.c",
+            "test/test-loop-handles.c",
+            "test/test-loop-stop.c",
+            "test/test-loop-time.c",
+            "test/test-metrics.c",
+            "test/test-multiple-listen.c",
+            "test/test-mutexes.c",
+            "test/test-not-readable-nor-writable-on-read-error.c",
+            "test/test-not-writable-after-shutdown.c",
+            "test/test-osx-select.c",
+            "test/test-pass-always.c",
+            "test/test-ping-pong.c",
+            "test/test-pipe-bind-error.c",
+            "test/test-pipe-close-stdout-read-stdin.c",
+            "test/test-pipe-connect-error.c",
+            "test/test-pipe-connect-multiple.c",
+            "test/test-pipe-connect-prepare.c",
+            "test/test-pipe-getsockname.c",
+            "test/test-pipe-pending-instances.c",
+            "test/test-pipe-sendmsg.c",
+            "test/test-pipe-server-close.c",
+            "test/test-pipe-set-fchmod.c",
+            "test/test-pipe-set-non-blocking.c",
+            "test/test-platform-output.c",
+            "test/test-poll-close-doesnt-corrupt-stack.c",
+            "test/test-poll-close.c",
+            "test/test-poll-closesocket.c",
+            "test/test-poll-multiple-handles.c",
+            "test/test-poll-oob.c",
+            "test/test-poll.c",
+            "test/test-process-priority.c",
+            "test/test-process-title-threadsafe.c",
+            "test/test-process-title.c",
+            "test/test-queue-foreach-delete.c",
+            "test/test-random.c",
+            "test/test-readable-on-eof.c",
+            "test/test-ref.c",
+            "test/test-run-nowait.c",
+            "test/test-run-once.c",
+            "test/test-semaphore.c",
+            "test/test-shutdown-close.c",
+            "test/test-shutdown-eof.c",
+            "test/test-shutdown-simultaneous.c",
+            "test/test-shutdown-twice.c",
+            "test/test-signal-multiple-loops.c",
+            "test/test-signal-pending-on-close.c",
+            "test/test-signal.c",
+            "test/test-socket-buffer-size.c",
+            "test/test-spawn.c",
+            "test/test-stdio-over-pipes.c",
+            "test/test-strscpy.c",
+            "test/test-strtok.c",
+            "test/test-tcp-alloc-cb-fail.c",
+            "test/test-tcp-bind-error.c",
+            "test/test-tcp-bind6-error.c",
+            "test/test-tcp-close-accept.c",
+            "test/test-tcp-close-after-read-timeout.c",
+            "test/test-tcp-close-while-connecting.c",
+            "test/test-tcp-close.c",
+            "test/test-tcp-close-reset.c",
+            "test/test-tcp-connect-error-after-write.c",
+            "test/test-tcp-connect-error.c",
+            "test/test-tcp-connect-timeout.c",
+            "test/test-tcp-connect6-error.c",
+            "test/test-tcp-create-socket-early.c",
+            "test/test-tcp-flags.c",
+            "test/test-tcp-oob.c",
+            "test/test-tcp-open.c",
+            "test/test-tcp-read-stop.c",
+            "test/test-tcp-read-stop-start.c",
+            "test/test-tcp-rst.c",
+            "test/test-tcp-shutdown-after-write.c",
+            "test/test-tcp-try-write.c",
+            "test/test-tcp-write-in-a-row.c",
+            "test/test-tcp-try-write-error.c",
+            "test/test-tcp-unexpected-read.c",
+            "test/test-tcp-write-after-connect.c",
+            "test/test-tcp-write-fail.c",
+            "test/test-tcp-write-queue-order.c",
+            "test/test-tcp-write-to-half-open-connection.c",
+            "test/test-tcp-writealot.c",
+            "test/test-test-macros.c",
+            "test/test-thread-affinity.c",
+            "test/test-thread-equal.c",
+            "test/test-thread.c",
+            "test/test-thread-priority.c",
+            "test/test-threadpool-cancel.c",
+            "test/test-threadpool.c",
+            "test/test-timer-again.c",
+            "test/test-timer-from-check.c",
+            "test/test-timer.c",
+            "test/test-tmpdir.c",
+            "test/test-tty-duplicate-key.c",
+            "test/test-tty-escape-sequence-processing.c",
+            "test/test-tty.c",
+            "test/test-udp-alloc-cb-fail.c",
+            "test/test-udp-bind.c",
+            "test/test-udp-connect.c",
+            "test/test-udp-connect6.c",
+            "test/test-udp-create-socket-early.c",
+            "test/test-udp-dgram-too-big.c",
+            "test/test-udp-ipv6.c",
+            "test/test-udp-mmsg.c",
+            "test/test-udp-multicast-interface.c",
+            "test/test-udp-multicast-interface6.c",
+            "test/test-udp-multicast-join.c",
+            "test/test-udp-multicast-join6.c",
+            "test/test-udp-multicast-ttl.c",
+            "test/test-udp-open.c",
+            "test/test-udp-options.c",
+            "test/test-udp-send-and-recv.c",
+            "test/test-udp-send-hang-loop.c",
+            "test/test-udp-send-immediate.c",
+            "test/test-udp-sendmmsg-error.c",
+            "test/test-udp-send-unreachable.c",
+            "test/test-udp-try-send.c",
+            "test/test-udp-recv-in-a-row.c",
+            "test/test-uname.c",
+            "test/test-walk-handles.c",
+            "test/test-watcher-cross-stop.c",
+        });
+
+        const exe = b.addExecutable(.{
+            .name = "uv_run_tests_a",
+            .target = target,
+            .optimize = optimize,
+        });
+
+        for (uv_defines.items) |define| {
+            exe.defineCMacro(define[0], define[1]);
+        }
+
+        exe.addCSourceFiles(.{
+            .files = uv_test_sources.items,
+            .flags = uv_cflags.items,
+        });
+
+        exe.linkLibC();
+        exe.linkLibrary(lib);
+
+        for (uv_test_libraries.items) |uv_test_library| {
+            exe.linkSystemLibrary(uv_test_library);
+        }
+
+        b.installArtifact(exe);
+    }
 }
