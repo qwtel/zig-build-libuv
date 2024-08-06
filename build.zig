@@ -1,3 +1,6 @@
+// Zig build for libuv based on CMakeLists.txt
+// DOES NOT CORRECTLY WORK ON WINDOWS for reasons unknown. Build will succeed but tests fail.
+
 const std = @import("std");
 
 pub fn build(b: *std.Build) !void {
