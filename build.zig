@@ -30,6 +30,7 @@ pub fn build(b: *std.Build) !void {
 
     // TODO: add lint flags from cmakelist.txt?
     try uv_cflags.appendSlice(&.{
+        "-std=gnu90", // should be equivalent to C90 + USE EXTENSIONS
         "-Wall",
         "-fno-strict-aliasing",
     });
