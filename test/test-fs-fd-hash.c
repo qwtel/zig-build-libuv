@@ -24,7 +24,7 @@
 #include "uv.h"
 #include "task.h"
 
-#include "../src/win/fs-fd-hash-inl.h"
+#include "win/fs-fd-hash-inl.h"
 
 
 #define HASH_MAX 1000000000

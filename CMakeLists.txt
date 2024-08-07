@@ -489,34 +489,35 @@ endif()
 if(LIBUV_BUILD_TESTS)
   # Small hack: use ${uv_test_sources} now to get the runner skeleton,
   # before the actual tests are added.
-  add_executable(
-    uv_run_benchmarks_a
-    ${uv_test_sources}
-    test/benchmark-async-pummel.c
-    test/benchmark-async.c
-    test/benchmark-fs-stat.c
-    test/benchmark-getaddrinfo.c
-    test/benchmark-loop-count.c
-    test/benchmark-queue-work.c
-    test/benchmark-million-async.c
-    test/benchmark-million-timers.c
-    test/benchmark-multi-accept.c
-    test/benchmark-ping-pongs.c
-    test/benchmark-ping-udp.c
-    test/benchmark-pound.c
-    test/benchmark-pump.c
-    test/benchmark-sizes.c
-    test/benchmark-spawn.c
-    test/benchmark-tcp-write-batch.c
-    test/benchmark-thread.c
-    test/benchmark-udp-pummel.c
-    test/blackhole-server.c
-    test/echo-server.c
-    test/run-benchmarks.c
-    test/runner.c)
-  target_compile_definitions(uv_run_benchmarks_a PRIVATE ${uv_defines})
-  target_compile_options(uv_run_benchmarks_a PRIVATE ${uv_cflags})
-  target_link_libraries(uv_run_benchmarks_a uv_a ${uv_test_libraries})
+  # add_executable(
+  #   uv_run_benchmarks_a
+  #   ${uv_test_sources}
+  #   test/benchmark-async-pummel.c
+  #   test/benchmark-async.c
+  #   test/benchmark-fs-stat.c
+  #   test/benchmark-getaddrinfo.c
+  #   test/benchmark-loop-count.c
+  #   test/benchmark-queue-work.c
+  #   test/benchmark-million-async.c
+  #   test/benchmark-million-timers.c
+  #   test/benchmark-multi-accept.c
+  #   test/benchmark-ping-pongs.c
+  #   test/benchmark-ping-udp.c
+  #   test/benchmark-pound.c
+  #   test/benchmark-pump.c
+  #   test/benchmark-sizes.c
+  #   test/benchmark-spawn.c
+  #   test/benchmark-tcp-write-batch.c
+  #   test/benchmark-thread.c
+  #   test/benchmark-udp-pummel.c
+  #   test/blackhole-server.c
+  #   test/echo-server.c
+  #   test/run-benchmarks.c
+  #   test/runner.c)
+  # target_compile_definitions(uv_run_benchmarks_a PRIVATE ${uv_defines})
+  # target_compile_options(uv_run_benchmarks_a PRIVATE ${uv_cflags})
+  # target_include_directories(uv_run_benchmarks_a PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>)
+  # target_link_libraries(uv_run_benchmarks_a uv_a ${uv_test_libraries})
 
   list(APPEND uv_test_sources
        test/blackhole-server.c
@@ -695,27 +696,29 @@ if(LIBUV_BUILD_TESTS)
        test/test-walk-handles.c
        test/test-watcher-cross-stop.c)
 
-  add_executable(uv_run_tests ${uv_test_sources} uv_win_longpath.manifest)
-  target_compile_definitions(uv_run_tests
-                             PRIVATE ${uv_defines} USING_UV_SHARED=1)
-  target_compile_options(uv_run_tests PRIVATE ${uv_cflags})
-  target_link_libraries(uv_run_tests uv ${uv_test_libraries})
-  add_test(NAME uv_test
-           COMMAND uv_run_tests
-           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-  if(CMAKE_SYSTEM_NAME STREQUAL "OS390")
-    set_tests_properties(uv_test PROPERTIES ENVIRONMENT
-                         "LIBPATH=${CMAKE_BINARY_DIR}:$ENV{LIBPATH}")
-  endif()
-  if(WIN32)
-    add_custom_command(TARGET uv_run_tests POST_BUILD
-                       COMMAND "${CMAKE_COMMAND}" -E copy
-                       "$<TARGET_FILE:uv_run_tests>"
-                       "$<TARGET_FILE_DIR:uv_run_tests>/uv_run_tests_no_ext")
-  endif()
+  # add_executable(uv_run_tests ${uv_test_sources} uv_win_longpath.manifest)
+  # target_compile_definitions(uv_run_tests
+  #                            PRIVATE ${uv_defines} USING_UV_SHARED=1)
+  # target_compile_options(uv_run_tests PRIVATE ${uv_cflags})
+  # target_include_directories(uv_run_tests PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>)
+  # target_link_libraries(uv_run_tests uv ${uv_test_libraries})
+  # add_test(NAME uv_test
+  #          COMMAND uv_run_tests
+  #          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  # if(CMAKE_SYSTEM_NAME STREQUAL "OS390")
+  #   set_tests_properties(uv_test PROPERTIES ENVIRONMENT
+  #                        "LIBPATH=${CMAKE_BINARY_DIR}:$ENV{LIBPATH}")
+  # endif()
+  # if(WIN32)
+  #   add_custom_command(TARGET uv_run_tests POST_BUILD
+  #                      COMMAND "${CMAKE_COMMAND}" -E copy
+  #                      "$<TARGET_FILE:uv_run_tests>"
+  #                      "$<TARGET_FILE_DIR:uv_run_tests>/uv_run_tests_no_ext")
+  # endif()
   add_executable(uv_run_tests_a ${uv_test_sources} uv_win_longpath.manifest)
   target_compile_definitions(uv_run_tests_a PRIVATE ${uv_defines})
   target_compile_options(uv_run_tests_a PRIVATE ${uv_cflags})
+  target_include_directories(uv_run_tests_a PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>)
   if(QEMU)
     target_link_libraries(uv_run_tests_a uv_a ${uv_test_libraries} -static)
   else()

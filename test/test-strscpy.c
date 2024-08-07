@@ -23,8 +23,7 @@
 #include "task.h"
 #include <string.h>
 
-#include "../src/strscpy.h"
-#include "../src/strscpy.c"
+#include "strscpy.h"
 
 TEST_IMPL(strscpy) {
   char d[4];

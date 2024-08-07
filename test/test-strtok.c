@@ -23,8 +23,7 @@
 #include "task.h"
 #include <string.h>
 
-#include "../src/strtok.h"
-#include "../src/strtok.c"
+#include "strtok.h"
 
 struct strtok_test_case {
   const char* str;

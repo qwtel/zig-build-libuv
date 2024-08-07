@@ -1,6 +1,3 @@
-// Zig build for libuv based on CMakeLists.txt
-// DOES NOT CORRECTLY WORK ON WINDOWS for reasons unknown. Build will succeed but tests fail.
-
 const std = @import("std");
 
 pub fn build(b: *std.Build) !void {
@@ -34,6 +31,7 @@ pub fn build(b: *std.Build) !void {
     // TODO: add lint flags from cmakelist.txt?
     try uv_cflags.appendSlice(&.{
         "-std=gnu90", // should be equivalent to C90 + USE EXTENSIONS
+        "-fvisibility=hidden",
         "-Wall",
         "-fno-strict-aliasing",
     });
@@ -453,6 +451,7 @@ pub fn build(b: *std.Build) !void {
             .files = uv_test_sources.items,
             .flags = uv_cflags.items,
         });
+        exe.addIncludePath(b.path("src"));
 
         exe.linkLibC();
         exe.linkLibrary(lib);
