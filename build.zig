@@ -22,6 +22,7 @@ pub fn build(b: *std.Build) !void {
     var uv_cflags = std.ArrayList([]const u8).init(b.allocator);
     var uv_test_sources = std.ArrayList([]const u8).init(b.allocator);
     var uv_test_libraries = std.ArrayList([]const u8).init(b.allocator);
+    var uv_test_cflags = std.ArrayList([]const u8).init(b.allocator);
 
     // TODO: add lint flags from cmakelist.txt?
     try uv_cflags.appendSlice(&.{
@@ -29,7 +30,6 @@ pub fn build(b: *std.Build) !void {
         "-fvisibility=hidden",
         "-Wall",
         "-fno-strict-aliasing",
-        "-fno-sanitize=all", // Trust libuv authors. This option makes tests pass in debug mode.
     });
 
     try uv_sources.appendSlice(&.{
@@ -255,6 +255,13 @@ pub fn build(b: *std.Build) !void {
     const opt_build_tests = b.option(bool, "build-tests", "") orelse false;
 
     if (opt_build_tests) {
+        try uv_test_cflags.appendSlice(&.{
+            "-std=gnu90",
+            "-Wall",
+            "-fvisibility=hidden",
+            "-fno-strict-aliasing",
+            "-fno-sanitize=all",
+        });
         try uv_test_sources.appendSlice(&.{
             "test/blackhole-server.c",
             "test/echo-server.c",
@@ -445,7 +452,7 @@ pub fn build(b: *std.Build) !void {
 
         exe.addCSourceFiles(.{
             .files = uv_test_sources.items,
-            .flags = uv_cflags.items,
+            .flags = uv_test_cflags.items,
         });
         exe.addIncludePath(b.path("src"));
 
