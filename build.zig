@@ -29,7 +29,7 @@ pub fn build(b: *std.Build) !void {
         "-fvisibility=hidden",
         "-Wall",
         "-fno-strict-aliasing",
-        "-fno-sanitize=undefined", // Trust libuv authors. This option makes tests pass in debug mode.
+        "-fno-sanitize=all", // Trust libuv authors. This option makes tests pass in debug mode.
     });
 
     try uv_sources.appendSlice(&.{
@@ -252,9 +252,9 @@ pub fn build(b: *std.Build) !void {
 
     b.installArtifact(lib);
 
-    const LIBUV_BUILD_TESTS = b.option(bool, "build-tests", "") orelse false;
+    const opt_build_tests = b.option(bool, "build-tests", "") orelse false;
 
-    if (LIBUV_BUILD_TESTS) {
+    if (opt_build_tests) {
         try uv_test_sources.appendSlice(&.{
             "test/blackhole-server.c",
             "test/echo-server.c",
@@ -457,5 +457,9 @@ pub fn build(b: *std.Build) !void {
         }
 
         b.installArtifact(exe);
+
+        const art_run = b.addRunArtifact(exe);
+        const run_step = b.step("run", "Run the test suite when built with -Dbuild-tests");
+        run_step.dependOn(&art_run.step);
     }
 }
