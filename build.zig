@@ -30,10 +30,11 @@ pub fn build(b: *std.Build) !void {
 
     // TODO: add lint flags from cmakelist.txt?
     try uv_cflags.appendSlice(&.{
-        "-std=gnu90", // should be equivalent to C90 + USE EXTENSIONS
+        "-std=gnu90", // Should be equivalent to C90 + USE EXTENSIONS
         "-fvisibility=hidden",
         "-Wall",
         "-fno-strict-aliasing",
+        "-fno-sanitize=undefined", // Trust libuv authors. This option makes tests pass in debug mode.
     });
 
     try uv_sources.appendSlice(&.{
