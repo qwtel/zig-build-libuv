@@ -22,11 +22,6 @@ pub fn build(b: *std.Build) !void {
     var uv_cflags = std.ArrayList([]const u8).init(b.allocator);
     var uv_test_sources = std.ArrayList([]const u8).init(b.allocator);
     var uv_test_libraries = std.ArrayList([]const u8).init(b.allocator);
-    defer uv_defines.deinit();
-    defer uv_sources.deinit();
-    defer uv_cflags.deinit();
-    defer uv_test_sources.deinit();
-    defer uv_test_libraries.deinit();
 
     // TODO: add lint flags from cmakelist.txt?
     try uv_cflags.appendSlice(&.{
