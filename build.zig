@@ -95,7 +95,7 @@ pub fn build(b: *std.Build) !void {
     } else {
         try uv_defines.append(&.{ "_FILE_OFFSET_BITS", "64" });
         try uv_defines.append(&.{ "_LARGEFILE_SOURCE", "1" });
-        if (!result.isAndroid()) {
+        if (!result.abi.isAndroid()) {
             lib.linkSystemLibrary("pthread");
         }
 
@@ -122,7 +122,7 @@ pub fn build(b: *std.Build) !void {
         try uv_test_sources.appendSlice(&.{"test/runner-unix.c"});
     }
 
-    if (result.isAndroid()) {
+    if (result.abi.isAndroid()) {
         try uv_defines.append(&.{ "_GNU_SOURCE", "1" });
         lib.linkSystemLibrary("dl");
         try uv_sources.appendSlice(&.{
@@ -134,7 +134,7 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
-    if (result.isDarwin() or result.isAndroid() or os.tag == .linux) {
+    if (result.os.tag.isDarwin() or result.abi.isAndroid() or os.tag == .linux) {
         try uv_sources.appendSlice(&.{
             "src/unix/proctitle.c",
         });
@@ -153,7 +153,7 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
-    if (result.isBSD()) { // incl Drawin
+    if (result.os.tag.isBSD()) { // incl Drawin
         try uv_sources.appendSlice(&.{
             "src/unix/bsd-ifaddrs.c",
             "src/unix/kqueue.c",
@@ -166,13 +166,13 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
-    if (result.isDarwin() or os.tag == .openbsd) {
+    if (result.os.tag.isDarwin() or os.tag == .openbsd) {
         try uv_sources.appendSlice(&.{
             "src/unix/random-getentropy.c",
         });
     }
 
-    if (result.isDarwin()) {
+    if (result.os.tag.isDarwin()) {
         try uv_defines.append(&.{ "_DARWIN_UNLIMITED_SELECT", "1" });
         try uv_defines.append(&.{ "_DARWIN_USE_64_BIT_INODE", "1" });
         try uv_sources.appendSlice(&.{
@@ -182,7 +182,7 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
-    if (os.tag == .hurd and result.isGnu()) {
+    if (os.tag == .hurd and result.abi.isGnu()) {
         lib.linkSystemLibrary("dl");
         try uv_sources.appendSlice(&.{
             "src/unix/bsd-ifaddrs.c",
@@ -234,7 +234,7 @@ pub fn build(b: *std.Build) !void {
         });
     }
 
-    if (result.isBSD() or os.tag == .linux) {
+    if (result.os.tag.isBSD() or os.tag == .linux) {
         try uv_test_libraries.append("util");
     }
 
@@ -245,7 +245,7 @@ pub fn build(b: *std.Build) !void {
     lib.linkLibC();
 
     for (uv_defines.items) |define| {
-        lib.defineCMacro(define[0], define[1]);
+        lib.root_module.addCMacro(define[0], define[1]);
     }
 
     lib.installHeadersDirectory(b.path("include"), "", .{});
@@ -447,7 +447,7 @@ pub fn build(b: *std.Build) !void {
         });
 
         for (uv_defines.items) |define| {
-            exe.defineCMacro(define[0], define[1]);
+            exe.root_module.addCMacro(define[0], define[1]);
         }
 
         exe.addCSourceFiles(.{
