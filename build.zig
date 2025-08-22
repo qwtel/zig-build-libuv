@@ -4,10 +4,13 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
+        .linkage = .static,
         .name = "uv_a",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     // Include dirs
@@ -17,12 +20,12 @@ pub fn build(b: *std.Build) !void {
     const result = target.result;
     const os = result.os;
 
-    var uv_defines = std.ArrayList([]const []const u8).init(b.allocator);
-    var uv_sources = std.ArrayList([]const u8).init(b.allocator);
-    var uv_cflags = std.ArrayList([]const u8).init(b.allocator);
-    var uv_test_sources = std.ArrayList([]const u8).init(b.allocator);
-    var uv_test_libraries = std.ArrayList([]const u8).init(b.allocator);
-    var uv_test_cflags = std.ArrayList([]const u8).init(b.allocator);
+    var uv_defines = std.array_list.Managed([]const []const u8).init(b.allocator);
+    var uv_sources = std.array_list.Managed([]const u8).init(b.allocator);
+    var uv_cflags = std.array_list.Managed([]const u8).init(b.allocator);
+    var uv_test_sources = std.array_list.Managed([]const u8).init(b.allocator);
+    var uv_test_libraries = std.array_list.Managed([]const u8).init(b.allocator);
+    var uv_test_cflags = std.array_list.Managed([]const u8).init(b.allocator);
 
     // TODO: add lint flags from cmakelist.txt?
     try uv_cflags.appendSlice(&.{
@@ -442,8 +445,10 @@ pub fn build(b: *std.Build) !void {
 
         const exe = b.addExecutable(.{
             .name = "uv_run_tests_a",
-            .target = target,
-            .optimize = optimize,
+            .root_module = b.createModule(.{
+                .target = target,
+                .optimize = optimize,
+            }),
         });
 
         for (uv_defines.items) |define| {
