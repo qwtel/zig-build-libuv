@@ -10,12 +10,13 @@ pub fn build(b: *std.Build) !void {
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
     });
 
     // Include dirs
-    lib.addIncludePath(b.path("include"));
-    lib.addIncludePath(b.path("src"));
+    lib.root_module.addIncludePath(b.path("include"));
+    lib.root_module.addIncludePath(b.path("src"));
 
     const result = target.result;
     const os = result.os;
@@ -56,15 +57,15 @@ pub fn build(b: *std.Build) !void {
         try uv_defines.append(&.{ "_WIN32_WINNT", "0x0602" });
         try uv_defines.append(&.{ "_CRT_DECLARE_NONSTDC_NAMES", "0" });
 
-        lib.linkSystemLibrary("psapi");
-        lib.linkSystemLibrary("user32");
-        lib.linkSystemLibrary("advapi32");
-        lib.linkSystemLibrary("iphlpapi");
-        lib.linkSystemLibrary("userenv");
-        lib.linkSystemLibrary("ws2_32");
-        lib.linkSystemLibrary("dbghelp");
-        lib.linkSystemLibrary("ole32");
-        lib.linkSystemLibrary("shell32");
+        lib.root_module.linkSystemLibrary("psapi", .{});
+        lib.root_module.linkSystemLibrary("user32", .{});
+        lib.root_module.linkSystemLibrary("advapi32", .{});
+        lib.root_module.linkSystemLibrary("iphlpapi", .{});
+        lib.root_module.linkSystemLibrary("userenv", .{});
+        lib.root_module.linkSystemLibrary("ws2_32", .{});
+        lib.root_module.linkSystemLibrary("dbghelp", .{});
+        lib.root_module.linkSystemLibrary("ole32", .{});
+        lib.root_module.linkSystemLibrary("shell32", .{});
 
         try uv_sources.appendSlice(&.{
             "src/win/async.c",
@@ -99,7 +100,7 @@ pub fn build(b: *std.Build) !void {
         try uv_defines.append(&.{ "_FILE_OFFSET_BITS", "64" });
         try uv_defines.append(&.{ "_LARGEFILE_SOURCE", "1" });
         if (!result.abi.isAndroid()) {
-            lib.linkSystemLibrary("pthread");
+            lib.root_module.linkSystemLibrary("pthread", .{});
         }
 
         try uv_sources.appendSlice(&.{
@@ -127,7 +128,7 @@ pub fn build(b: *std.Build) !void {
 
     if (result.abi.isAndroid()) {
         try uv_defines.append(&.{ "_GNU_SOURCE", "1" });
-        lib.linkSystemLibrary("dl");
+        lib.root_module.linkSystemLibrary("dl", .{});
         try uv_sources.appendSlice(&.{
             "src/unix/linux.c",
             "src/unix/procfs-exepath.c",
@@ -186,7 +187,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     if (os.tag == .hurd and result.abi.isGnu()) {
-        lib.linkSystemLibrary("dl");
+        lib.root_module.linkSystemLibrary("dl", .{});
         try uv_sources.appendSlice(&.{
             "src/unix/bsd-ifaddrs.c",
             "src/unix/no-fsevents.c",
@@ -200,8 +201,8 @@ pub fn build(b: *std.Build) !void {
     if (os.tag == .linux) {
         try uv_defines.append(&.{ "_GNU_SOURCE", "1" });
         try uv_defines.append(&.{ "_POSIX_C_SOURCE", "200112" });
-        lib.linkSystemLibrary("dl");
-        lib.linkSystemLibrary("rt");
+        lib.root_module.linkSystemLibrary("dl", .{});
+        lib.root_module.linkSystemLibrary("rt", .{});
         try uv_sources.appendSlice(&.{
             "src/unix/linux.c",
             "src/unix/procfs-exepath.c",
@@ -214,7 +215,7 @@ pub fn build(b: *std.Build) !void {
         try uv_sources.appendSlice(&.{
             "src/unix/netbsd.c",
         });
-        lib.linkSystemLibrary("kvm");
+        lib.root_module.linkSystemLibrary("kvm", .{});
     }
 
     if (os.tag == .openbsd) {
@@ -225,8 +226,8 @@ pub fn build(b: *std.Build) !void {
 
     if (os.tag == .haiku) {
         try uv_defines.append(&.{ "_BSD_SOURCE", "1" });
-        lib.linkSystemLibrary("bsd");
-        lib.linkSystemLibrary("network");
+        lib.root_module.linkSystemLibrary("bsd", .{});
+        lib.root_module.linkSystemLibrary("network", .{});
         try uv_sources.appendSlice(&.{
             "src/unix/haiku.c",
             "src/unix/bsd-ifaddrs.c",
@@ -241,11 +242,11 @@ pub fn build(b: *std.Build) !void {
         try uv_test_libraries.append("util");
     }
 
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .files = uv_sources.items,
         .flags = uv_cflags.items,
     });
-    lib.linkLibC();
+    
 
     for (uv_defines.items) |define| {
         lib.root_module.addCMacro(define[0], define[1]);
@@ -448,6 +449,7 @@ pub fn build(b: *std.Build) !void {
             .root_module = b.createModule(.{
                 .target = target,
                 .optimize = optimize,
+                .link_libc = true,
             }),
         });
 
@@ -455,17 +457,16 @@ pub fn build(b: *std.Build) !void {
             exe.root_module.addCMacro(define[0], define[1]);
         }
 
-        exe.addCSourceFiles(.{
+        exe.root_module.addCSourceFiles(.{
             .files = uv_test_sources.items,
             .flags = uv_test_cflags.items,
         });
-        exe.addIncludePath(b.path("src"));
+        exe.root_module.addIncludePath(b.path("src"));
 
-        exe.linkLibC();
-        exe.linkLibrary(lib);
+        exe.root_module.linkLibrary(lib);
 
         for (uv_test_libraries.items) |uv_test_library| {
-            exe.linkSystemLibrary(uv_test_library);
+            exe.root_module.linkSystemLibrary(uv_test_library, .{});
         }
 
         b.installArtifact(exe);
