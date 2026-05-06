@@ -2,7 +2,7 @@
     .name = .libuv,
     .version = "25.8.0",
     .fingerprint = 0x7cb3932c635358ba,
-    .minimum_zig_version = "0.15.1",
+    .minimum_zig_version = "0.16.0",
     .dependencies = .{},
     .paths = .{
         "build.zig",
